@@ -49,154 +49,155 @@ video_loop = sorted(video_loop, key=lambda i: i["order"])
 
 
 
-#  2 threads
-# Queue:  Publisher(bar ccode scanner) and subsciber(Video looper)
-class myThread(threading.Thread):
-    def __init__(self, threadID, name, q, q2, player):
+# create a queue to hold the videos
+play_list_queue = Queue(maxsize=1)
+
+player = OMXPlayer("")
+
+
+# create player thread
+class PlayerThread(threading.Thread):
+    def __init__(self, queue : Queue, player : OMXPlayer):
         threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.name = name
-        self.q = q
-        self.q2 = q2
+        self.queue = queue
         self.player = player
-        self.last_video_index = 0
 
-    def loop_videos(self):
-        end_loop = False
-        
-        i = self.last_video_index
-        while True:
-            while i < len(video_loop):
-                self.last_video_index = i
-                b_item = video_loop[i]
-                i+=1
-                try:
-                    if self.q.get_nowait() == "stop":
-                        end_loop = True
-                        self.q.task_done()
-                        break
-                except:
-                    pass
-                if b_item["order"] is not "0":
-                    if self.player:
-                        self.player.load(video_home + b_item["video"])
-                    sleep(0.5)
-                    self.player.play()
-#                    sleep(2.5)
-                    try:
-                        while self.player.is_playing():
-                            sleep(0.5)
-                    except:
-                        pass
-                    sleep(0.5)
-                try:
-                    if self.q.get_nowait() == "stop":
-                        end_loop = True
-                        self.q.task_done()
-                        break
-                except:
-                    pass
-            i = 0
-            if end_loop:
-                break
-    def thread1(self):
-        while True:
-            try:
-                message =  self.q.get_nowait()
-                     
-                if message == "start":
-                    
-                    self.q.task_done()
-                    self.loop_videos()
-
-                if message == "stop":
-                    
-                    self.q.task_done()
-                    
-            except:
-                pass
 
     def run(self):
-        
-        if self.threadID == 1:
-            # video looper
+        last_playing_video = None
+        last_playing_video_index = 0
+
+        while True:
             
-            self.thread1()
+            if self.queue.empty():
+                # play loop video
 
-            
-                    
-        if self.threadID == 2:
-            
-            while True:
-                if not self.q2.empty():
-                    message = self.q2.get_nowait()
-                    if message[:4] == "play":
-                        sleep(0.5)
-                        self.q2.task_done()
-                        player.load(video_home + barcode_mapper[message[5:]]["video"])
-                        sleep(0.5)
-                        player.play()
-                        sleep(0.5)
-                        # We check if its still playing
-                        try:
-                            while self.player.is_playing():
-                                sleep(0.01)
-                        except:
-                            pass 
-                        
+                while True:
+                    sleep(0.5)
+                    if not self.player.is_playing():
+                        video = video_loop[last_playing_video_index]["video"]
+                        self.player.load(video)
+                        print("Playing", video)
+                        self.player.play()
 
-                        if self.q2.empty():
-                            # Starting the loop back again, only if its safely finished playing the video,
-                            # if its interrupted with the new bar_code, then we get back to the beginning of the queue again.
-                            if self.player:
-                                self.player.load(video_home+"blazing7-30sec.mp4")
-                            sleep(0.5)
-                            self.player.play()
-                            sleep(0.5)
-                            try:
-                                while self.player.is_playing():
-                                    sleep(0.5)
-                            except:
-                                self.q.put_nowait("start")
-                                pass
-                                                                                  
-                            pass
-                        
+                        last_playing_video = video
+                        last_playing_video_index += 1
+                        if last_playing_video_index == len(video_loop):
+                            last_playing_video_index = 0
 
-      
-
-
-queueLock = threading.Lock()
-workQueue = Queue(1)
-workQueue2 = Queue(1)
-player = None
-player = OMXPlayer(video_home+"blazing7-30sec.mp4")
-threads = []
-thread = myThread(1, 'video_looper', workQueue, barcode_mapper, player)
-thread.start()
-threads.append(thread)
-sleep(0.5)
-player.pause()
-workQueue.put_nowait("start")
-thread = myThread(2, 'bar_code_video_player', workQueue, workQueue2, player)
-thread.start()
-threads.append(thread)
-
-    
-def startPlayer():
-    while True:
-        # Run your bar code reader
-        bar_code = getpass.getpass("")
-        if bar_code and bar_code in barcode_mapper.keys():
-            workQueue2.put_nowait("play:" + bar_code)
-            if player and player.is_playing():
-                player.pause()
+                        if not self.queue.empty():
+                            break
                 
-            workQueue.put_nowait("stop")
-            sleep(2)
-            
+            else: 
+
+                barcode = self.queue.get()
+                play_list_queue.task_done()
+
+                if barcode == "none_exist":
+                    print("Invalid Barcode")
+                    # play no video
+
+                    if player.is_playing():
+                        player.stop()
+
+                    if last_playing_video == "no_video":
+                        # play intermission video
+                        player.load(video_home + "blazing7-30sec.mp4")
+                        print("Playing Intermission")
+                        player.play()
+                        last_playing_video = "intermission"
+                    
+                    elif last_playing_video == "intermission":
+                        # play no video
+                        player.load(video_home + "No Video.mp4")
+                        print("Playing No Video")
+                        player.play()
+                        last_playing_video = "no_video"
+
+                        while player.is_playing():
+                            sleep(0.5)
+                            if not self.queue.empty():
+                                break
+
+                        if not self.queue.empty():
+                            continue
+
+                        # play intermission video
+                        player.load(video_home + "blazing7-30sec.mp4")
+                        print("Playing Intermission")
+                        player.play()
+                        last_playing_video = "intermission"
+                    
+                    else:
+                        player.load(video_home + "No Video.mp4")
+                        print("Playing No Video")
+                        player.play()
+                        
+                        last_playing_video = "no_video"
+                        
+
+                    while self.player.is_playing(): # wait for video to finish playing
+                        sleep(0.5)
+                        if not self.queue.empty(): # check if new barcode has been scanned
+                            break
+
+                    if not self.queue.empty(): # check if new barcode has been scanned
+                        continue
+                    
+
+                else:
+                    video = barcode_mapper[barcode]["video"]
+
+                    if player.is_playing():
+                        player.stop()
+
+                    player.load(video)
+                    print("Playing", video)
+                    player.play()
+                    
+                    last_playing_video = video
+
+                    while self.queue.empty():
+                        sleep(0.5)
+                        if not self.player.is_playing():
+                            break
+                    
+                    if not self.queue.empty():
+                        continue
+
+                    self.player.load(video_home + "blazing7-30sec.mp4")
+                    print("Playing Intermission")
+                    self.player.play()
+                    last_playing_video = "intermission"
+
+                    while self.player.is_playing():
+                        sleep(0.5)
+                        if not self.queue.empty():
+                            break
+
+                    if not self.queue.empty():
+                        continue
+
+
+player_thread = PlayerThread(play_list_queue, player)
+player_thread.start()
+
+
+def startPlayer():
+    
+    while True:
+        bar_code = getpass.getpass("Enter barcode: ") 
+
+        if bar_code and bar_code in barcode_mapper.keys():
+            print("Barcode", bar_code)
+            play_list_queue.put(bar_code)
+                
+        else:
+            print("Invalid Barcode", bar_code)
+            play_list_queue.put("none_exist")
+
+
 startPlayer()
 
-        
 
         

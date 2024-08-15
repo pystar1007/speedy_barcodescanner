@@ -1,3 +1,5 @@
 venv/
+videos/
+
 *.mp4
 *.mov
