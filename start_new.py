@@ -90,15 +90,16 @@ class OMXPlayer:
 
 # create player thread
 class PlayerThread(threading.Thread):
-    def __init__(self, queue : Queue, player : OMXPlayer):
+    def __init__(self, queue : Queue):
         threading.Thread.__init__(self)
         self.queue = queue
         self.player = None
 
 
     def run(self):
-        last_playing_video = None
         last_playing_video_index = 0
+        last_playing_video = video_loop[last_playing_video_index]["video"]
+        self.player = OMXPlayer(video_home + last_playing_video)
 
         while True:
             
@@ -108,12 +109,23 @@ class PlayerThread(threading.Thread):
                 while True:
                     sleep(0.5)
                     try:
-                        self.player.is_playing()
-                        continue
+                        if self.player.is_playing():
+                            print("playing", last_playing_video)
+                            if not self.queue.empty():
+                                break
+                            continue
                     except:
                         pass
 
+                    if not self.queue.empty():
+                        break
+
+                    last_playing_video_index += 1
+                    if last_playing_video_index == len(video_loop):
+                        last_playing_video_index = 0
+
                     video = video_loop[last_playing_video_index]["video"]
+                    last_playing_video = video
 
                     try:
                         self.player.load(video_home + video)
@@ -121,16 +133,6 @@ class PlayerThread(threading.Thread):
                     except:
                         self.player = OMXPlayer(video_home + video)
 
-                    # print("Playing", video)
-
-                    last_playing_video = video
-                    last_playing_video_index += 1
-                    if last_playing_video_index == len(video_loop):
-                        last_playing_video_index = 0
-
-                    if not self.queue.empty():
-                        break
-                
             else: 
 
                 barcode = self.queue.get()
@@ -141,7 +143,6 @@ class PlayerThread(threading.Thread):
                     # play no video
                     try:
                         self.player.is_playing() 
-                        self.player.pause()
                     except:
                         pass
 
@@ -214,8 +215,7 @@ class PlayerThread(threading.Thread):
                     video = barcode_mapper[barcode]["video"]
 
                     try:
-                        if self.player.is_playing():
-                            self.player.pause()
+                        self.player.is_playing()
                     except:
                         pass
                     
@@ -261,6 +261,7 @@ class PlayerThread(threading.Thread):
 
 
 # create a queue to hold the videos
+queueLock = threading.Lock()
 play_list_queue = Queue(maxsize=1)
 
 player_thread = PlayerThread(play_list_queue)
