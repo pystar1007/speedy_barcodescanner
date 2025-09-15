@@ -63,7 +63,15 @@ class PlayerThread(threading.Thread):
         last_playing_video_index = 0
         last_playing_video = video_loop[last_playing_video_index]["video"]
         # s_time = time()
-        self.player = OMXPlayer(video_home + last_playing_video)
+        #print(last_playing_video_index, last_playing_video)
+        while True:
+            try:
+                self.player = OMXPlayer(video_home + last_playing_video)                            
+                break
+            except :
+                sleep(0.5)
+                print("line 73")
+                pass
         # print("Create", time() - s_time)
         #self.player.load(video_home + last_playing_video)
         #self.player.play()
@@ -102,13 +110,18 @@ class PlayerThread(threading.Thread):
                         self.player.load(video_home + video)
                         self.player.play()
                     
-                    except OMXPlayerDeadError:
+                    except:
                         # print("player dead")
-                        self.player = OMXPlayer(video_home + last_playing_video)
+                        #self.player = OMXPlayer(video_home + last_playing_video)
+                        while True:
+                            try:
+                                self.player = OMXPlayer(video_home + last_playing_video)                            
+                                break
+                            except :
+                                sleep(0.5)
+                                print("line 123")
+                                pass
                     
-                    except Exception as e:
-                        print("===", repr(e))
-
             else: 
 
                 barcode = self.queue.get()
@@ -125,9 +138,18 @@ class PlayerThread(threading.Thread):
                             self.player.load(video_home + "blazing7-30sec.mp4")
                             # print("Playing Intermission after no video")
                             self.player.play()
+                            sleep(0.5)
                             
-                        except OMXPlayerDeadError:
-                            self.player = OMXPlayer(video_home + "blazing7-30sec.mp4")
+                        except:
+                            #self.player = OMXPlayer(video_home + "blazing7-30sec.mp4")
+                            while True:
+                                try:
+                                    self.player = OMXPlayer(video_home + "blazing7-30sec.mp4")                            
+                                    break
+                                except :
+                                    sleep(0.5)
+                                    print("line 151")
+                                    pass
 
                         last_playing_video = "intermission"
                     
@@ -138,7 +160,15 @@ class PlayerThread(threading.Thread):
                             self.player.load(video_home + "No_video.mp4")
                             self.player.play()
                         except:
-                            self.player = OMXPlayer(video_home + "No_video.mp4")
+                            #self.player = OMXPlayer(video_home + "No_video.mp4")
+                            while True:
+                                try:
+                                    self.player = OMXPlayer(video_home + "No_video.mp4")                            
+                                    break
+                                except :
+                                    sleep(0.5)
+                                    print("line 170")
+                                    pass
 
                         # print("Playing No Video after intermission")
                         last_playing_video = "no_video"
@@ -161,7 +191,15 @@ class PlayerThread(threading.Thread):
                             # print("Playing Intermission")
                             self.player.play()
                         except:
-                            self.player = OMXPlayer(video_home + "blazing7-30sec.mp4")
+                            #self.player = OMXPlayer(video_home + "blazing7-30sec.mp4")
+                            while True:
+                                try:
+                                    self.player = OMXPlayer(video_home + "blazing7-30sec.mp4")                            
+                                    break
+                                except :
+                                    sleep(0.5)
+                                    print("line 201")
+                                    pass
 
                         last_playing_video = "intermission"
                     
@@ -172,7 +210,15 @@ class PlayerThread(threading.Thread):
                             # print("Playing No Video for invalid barcode")
                             self.player.play()
                         except:
-                            self.player = OMXPlayer(video_home + "No_video.mp4")
+                            #self.player = OMXPlayer(video_home + "No_video.mp4")
+                            while True:
+                                try:
+                                    self.player = OMXPlayer(video_home + "No_video.mp4")                            
+                                    break
+                                except :
+                                    sleep(0.5)
+                                    print("line 220")
+                                    pass
                         
                         last_playing_video = "no_video"
                         
@@ -193,15 +239,22 @@ class PlayerThread(threading.Thread):
                     video = barcode_mapper[barcode]["video"]
                     
                     try:
-                        self.player
+                        self.player.is_playing()
                         self.player.load(video)
                         # print("Playing Scanned", video)
-                        self.player.play()
+                        # self.player.play()
                             
                     except Exception as e:
-                        print(repr(e))
-                        self.player = OMXPlayer(video_home + video)
-                    
+                        #print(repr(e))
+                        while True:
+                            try:
+                                self.player = OMXPlayer(video_home + video)                            
+                                break
+                            except :
+                                sleep(0.5)
+                                print("line 255")
+                                pass
+                        
                     
                     last_playing_video = video
 
@@ -223,7 +276,15 @@ class PlayerThread(threading.Thread):
                         self.player.play()
                     except:
                         
-                        self.player = OMXPlayer(video_home + "blazing7-30sec.mp4")
+                        #self.player = OMXPlayer(video_home + "blazing7-30sec.mp4")
+                        while True:
+                            try:
+                                self.player = OMXPlayer(video_home + "blazing7-30sec.mp4")                            
+                                break
+                            except :
+                                sleep(0.5)
+                                print("line 287")
+                                pass
 
                     last_playing_video = "intermission"
                     try:
